@@ -57,15 +57,22 @@ def generate_image(prompt: str, output_path: Path):
     print(f"Saved image to {output_path}")
 
 def main():
+    def main():
     print(f"Fetching Substack feed from: {SUBSTACK_FEED_URL}")
     feed = feedparser.parse(SUBSTACK_FEED_URL)
 
+    # Substack's RSS is sometimes a bit messy; feedparser sets bozo=True
+    # but still gives us usable entries. We just log the warning and continue.
     if feed.bozo:
-        print("Error parsing feed:", feed.bozo_exception)
+        print("WARNING: feedparser reported a problem with the feed:")
+        print(feed.bozo_exception)
+
+    if not getattr(feed, "entries", None):
+        print("No entries found in feed.")
         return
 
     for entry in feed.entries:
-        title = entry.title
+        title = getattr(entry, "title", "Untitled")
         summary = getattr(entry, "summary", None)
         slug = slugify(title)
         output_path = IMAGES_DIR / f"{slug}.png"
@@ -76,6 +83,3 @@ def main():
 
         prompt = generate_prompt(title, summary)
         generate_image(prompt, output_path)
-
-if __name__ == "__main__":
-    main()
